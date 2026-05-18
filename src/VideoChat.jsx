@@ -33,9 +33,13 @@ function formatTime(s) {
   return h > 0 ? `${p(h)}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`;
 }
 
+const MAIN_VIDEO_LOOP_START = 120;
+const MAIN_VIDEO_LOOP_END = 146;
+
 export default function VideoChat() {
   const localVideoRef = useRef(null);
   const mainVideoRef = useRef(null);
+  const mainVideoLoopRef = useRef(false);
   const [recordState, setRecordState] = useState('idle');
   const recordStateRef = useRef('idle');
   const [sidebarTab, setSidebarTab] = useState('chat');
@@ -90,6 +94,31 @@ export default function VideoChat() {
 
   const toggle = ()=>{ const n = recordState==='idle'?'recording':'idle'; setRecordState(n); recordStateRef.current=n; };
 
+  const restartMainVideoLoop = () => {
+    const video = mainVideoRef.current;
+    if (!video) return;
+    video.currentTime = MAIN_VIDEO_LOOP_START;
+    video.play().catch(()=>{});
+  };
+
+  const handleMainVideoLoaded = () => {
+    const video = mainVideoRef.current;
+    if (!video) return;
+    mainVideoLoopRef.current = false;
+    video.currentTime = 0;
+  };
+
+  const handleMainVideoEnded = () => {
+    mainVideoLoopRef.current = true;
+    restartMainVideoLoop();
+  };
+
+  const handleMainVideoTimeUpdate = () => {
+    const video = mainVideoRef.current;
+    if (!mainVideoLoopRef.current || !video) return;
+    if (video.currentTime >= MAIN_VIDEO_LOOP_END) restartMainVideoLoop();
+  };
+
   return (
     <>
 
@@ -111,8 +140,12 @@ export default function VideoChat() {
           <div className="video-label-top">
             <Shield size={16} color="#4ade80"/> Entrevistador IA
           </div>
+          {/* Aqui iba el video anterior: src="/untitled.mp4" */}
           <video ref={mainVideoRef} className={`main-video ${videoReady ? 'visible' : ''}`}
-            src="/untitled.mp4" autoPlay loop playsInline/>
+            src="/render1.mp4" autoPlay playsInline
+            onLoadedMetadata={handleMainVideoLoaded}
+            onEnded={handleMainVideoEnded}
+            onTimeUpdate={handleMainVideoTimeUpdate}/>
           <div className="floating-user-video">
             <video ref={localVideoRef} className="local-video" autoPlay muted playsInline/>
             <div className="local-video-overlay-simple">
